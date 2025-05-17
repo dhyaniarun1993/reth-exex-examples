@@ -8,7 +8,7 @@ use alloy_rlp::Decodable as _;
 use reth::{
     api::Block as _, core::primitives::SignedTransaction, transaction_pool::TransactionPool,
 };
-use reth_evm::Evm;
+use reth_evm::{precompiles::PrecompilesMap, Evm};
 use reth_execution_errors::BlockValidationError;
 use reth_node_api::ConfigureEvm;
 use reth_node_ethereum::{evm::EthEvm, EthEvmConfig};
@@ -172,7 +172,7 @@ async fn decode_transactions<Pool: TransactionPool>(
 /// Execute transactions and return the list of executed transactions, receipts and
 /// execution results.
 fn execute_transactions<DB: reth_evm::Database>(
-    evm: &mut EthEvm<State<DB>, NoOpInspector>,
+    evm: &mut EthEvm<State<DB>, NoOpInspector, PrecompilesMap>,
     header: &Header,
     transactions: Vec<Recovered<TransactionSigned>>,
 ) -> eyre::Result<(Vec<TransactionSigned>, Vec<Receipt>, Vec<ExecutionResult>)>
