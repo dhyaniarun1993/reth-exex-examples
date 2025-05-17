@@ -45,7 +45,7 @@ struct BackfillExEx<Node: FullNodeComponents> {
     /// Receiver for backfill messages.
     backfill_rx: mpsc::UnboundedReceiver<BackfillMessage>,
     /// Factory for backfill jobs.
-    backfill_job_factory: BackfillJobFactory<Node::Executor, Node::Provider>,
+    backfill_job_factory: BackfillJobFactory<Node::Evm, Node::Provider>,
     /// Semaphore to limit the number of concurrent backfills.
     backfill_semaphore: Arc<Semaphore>,
     /// Next backfill job ID.
@@ -66,7 +66,7 @@ where
         backfill_limit: usize,
     ) -> Self {
         let backfill_job_factory =
-            BackfillJobFactory::new(ctx.block_executor().clone(), ctx.provider().clone());
+            BackfillJobFactory::new(ctx.evm_config().clone(), ctx.provider().clone());
         Self {
             ctx,
             backfill_tx,
@@ -189,7 +189,7 @@ where
     async fn backfill(
         _permit: OwnedSemaphorePermit,
         job_id: u64,
-        job: BackfillJob<Node::Executor, Node::Provider>,
+        job: BackfillJob<Node::Evm, Node::Provider>,
         backfill_tx: mpsc::UnboundedSender<BackfillMessage>,
         cancel_rx: oneshot::Receiver<oneshot::Sender<()>>,
     ) {
