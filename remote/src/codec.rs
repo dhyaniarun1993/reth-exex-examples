@@ -144,7 +144,7 @@ impl TryFrom<&reth::primitives::TransactionSigned> for proto::Transaction {
             s: transaction.signature().s().to_le_bytes_vec(),
             y_parity: transaction.signature().v(),
         };
-        let transaction = match &transaction {
+        let transaction = match &transaction.clone().into_typed_transaction() {
             reth::primitives::Transaction::Legacy(alloy_consensus::TxLegacy {
                 chain_id,
                 nonce,
