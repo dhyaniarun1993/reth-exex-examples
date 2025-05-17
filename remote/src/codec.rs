@@ -813,7 +813,7 @@ impl TryFrom<&proto::Transaction> for reth::primitives::TransactionSigned {
             }),
         };
 
-        Ok(reth::primitives::TransactionSigned::new(transaction, signature, hash))
+        Ok(reth::primitives::TransactionSigned::new_unchecked(transaction, signature, hash))
     }
 }
 
