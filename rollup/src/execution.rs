@@ -5,9 +5,7 @@ use alloy_eips::{
 };
 use alloy_primitives::{keccak256, Bytes, B256, U256};
 use alloy_rlp::Decodable as _;
-use reth::{
-    api::Block as _, core::primitives::SignedTransaction, transaction_pool::TransactionPool,
-};
+use reth::{api::Block as _, transaction_pool::TransactionPool};
 use reth_evm::{precompiles::PrecompilesMap, Evm};
 use reth_execution_errors::BlockValidationError;
 use reth_node_api::ConfigureEvm;
@@ -16,6 +14,7 @@ use reth_primitives::{
     Block, BlockBody, EthereumHardfork, Header, Receipt, Recovered, RecoveredBlock,
     TransactionSigned, TxType,
 };
+use reth_primitives_traits::SignedTransaction;
 use reth_revm::{
     context::result::{EVMError, ExecutionResult, ResultAndState},
     db::{states::bundle_state::BundleRetention, BundleState, StateBuilder},
@@ -110,7 +109,16 @@ async fn decode_transactions<Pool: TransactionPool>(
     let raw_transactions = if matches!(tx.tx_type(), TxType::Eip4844) {
         let blobs: Vec<_> = if let Some(sidecar) = pool.get_blob(*tx.hash())? {
             // Try to get blobs from the transaction pool
-            sidecar.blobs.clone().into_iter().zip(sidecar.commitments.clone()).collect()
+            if let Some(eip4844_sidecar) = sidecar.as_eip4844() {
+                eip4844_sidecar
+                    .blobs
+                    .clone()
+                    .into_iter()
+                    .zip(eip4844_sidecar.commitments.clone())
+                    .collect()
+            } else {
+                eyre::bail!("Expected EIP-4844 sidecar but got EIP-7594")
+            }
         } else {
             // If transaction is not found in the pool, try to get blobs from Blobscan
             let blobscan_client = foundry_blob_explorers::Client::holesky();
@@ -161,7 +169,7 @@ async fn decode_transactions<Pool: TransactionPool>(
     for raw_transaction in raw_transactions {
         let tx = TransactionSigned::decode_2718(&mut &raw_transaction[..])?;
         if tx.chain_id() == Some(CHAIN_ID) {
-            let sender = tx.recover_signer()?;
+            let sender = tx.try_recover()?;
             transactions.push(tx.with_signer(sender));
         }
     }
@@ -443,7 +451,9 @@ mod tests {
                     SidecarBuilder::<SimpleCoder>::from_slice(&encoded_transactions).build()?;
                 let blob_hashes = alloy_rlp::encode(sidecar.versioned_hashes().collect::<Vec<_>>());
 
-                let mut mock_transaction = MockTransaction::eip4844_with_sidecar(sidecar);
+                let mut mock_transaction = MockTransaction::eip4844_with_sidecar(
+                    alloy_eips::eip7594::BlobTransactionSidecarVariant::Eip4844(sidecar),
+                );
                 let transaction =
                     sign_tx_with_key_pair(key_pair, Transaction::from(mock_transaction.clone()));
                 mock_transaction.set_hash(*transaction.hash());
