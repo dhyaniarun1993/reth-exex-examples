@@ -35,11 +35,11 @@ impl BinanceDataFeeder {
     pub(crate) async fn new(symbols: Vec<String>) -> Result<Self, BinanceDataFeederError> {
         let query = symbols
             .iter()
-            .map(|symbol| format!("{}@ticker", symbol))
+            .map(|symbol| format!("{symbol}@ticker"))
             .collect::<Vec<String>>()
             .join("/");
 
-        let url = format!("wss://stream.binance.com/stream?streams={}", query);
+        let url = format!("wss://stream.binance.com/stream?streams={query}");
         let client = Self::connect_with_retries(url.to_string()).await?;
 
         Ok(Self { inner: client, symbols })

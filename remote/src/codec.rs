@@ -353,15 +353,12 @@ impl TryFrom<&reth::revm::bytecode::Bytecode> for proto::Bytecode {
                     original_len: legacy_analyzed.original_len() as u64,
                     jump_table: legacy_analyzed
                         .jump_table()
-                        .0
+                        .table
                         .iter()
                         .by_vals()
                         .map(|x| x.into())
                         .collect(),
                 })
-            }
-            reth::revm::state::Bytecode::Eof(_) => {
-                eyre::bail!("EOF bytecode not supported");
             }
             reth::revm::state::Bytecode::Eip7702(eip7702) => {
                 proto::bytecode::Bytecode::Eip7702(proto::Eip7702Bytecode {
@@ -880,9 +877,6 @@ impl TryFrom<&proto::Bytecode> for reth::revm::state::Bytecode {
                         ),
                     ),
                 )
-            }
-            proto::bytecode::Bytecode::Eof(_) => {
-                eyre::bail!("EOF bytecode not supported");
             }
             proto::bytecode::Bytecode::Eip7702(eip7702) => reth::revm::bytecode::Bytecode::Eip7702(
                 reth::revm::bytecode::eip7702::Eip7702Bytecode {

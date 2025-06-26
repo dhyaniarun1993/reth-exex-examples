@@ -229,7 +229,6 @@ message ContractBytecode {
 message Bytecode {
   oneof bytecode {
     LegacyAnalyzedBytecode legacy_analyzed = 1;
-    EofBytecode eof = 2;
     Eip7702Bytecode eip7702 = 3;
   }
 }
@@ -239,9 +238,6 @@ message LegacyAnalyzedBytecode {
   uint64 original_len = 2;
   repeated uint32 jump_table = 3;
 }
-
-// TODO: add EOF bytecode fields
-message EofBytecode {}
 
 message Eip7702Bytecode {
   bytes delegated_address = 1;
