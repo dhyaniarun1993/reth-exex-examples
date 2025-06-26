@@ -353,7 +353,7 @@ impl TryFrom<&reth::revm::bytecode::Bytecode> for proto::Bytecode {
                     original_len: legacy_analyzed.original_len() as u64,
                     jump_table: legacy_analyzed
                         .jump_table()
-                        .0
+                        .table
                         .iter()
                         .by_vals()
                         .map(|x| x.into())
