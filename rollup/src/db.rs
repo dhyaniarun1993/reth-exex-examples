@@ -28,6 +28,7 @@ pub type AccountRevertInit = (Option<Option<AccountInfo>>, Vec<StorageEntry>);
 /// Type used to initialize revms reverts.
 pub type RevertsInit = HashMap<Address, AccountRevertInit>;
 
+#[derive(Debug)]
 pub struct Database {
     connection: Arc<Mutex<Connection>>,
 }
