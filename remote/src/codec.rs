@@ -351,13 +351,8 @@ impl TryFrom<&reth::revm::bytecode::Bytecode> for proto::Bytecode {
                 proto::bytecode::Bytecode::LegacyAnalyzed(proto::LegacyAnalyzedBytecode {
                     bytecode: legacy_analyzed.bytecode().to_vec(),
                     original_len: legacy_analyzed.original_len() as u64,
-                    jump_table: legacy_analyzed
-                        .jump_table()
-                        .as_slice()
-                        .iter()
-                        .copied()
-                        .map(|x| x as u32)
-                        .collect(),
+                    jump_table: legacy_analyzed.jump_table().as_slice().iter().copied().collect(),
+                    jump_table_len: legacy_analyzed.jump_table().len() as u64,
                 })
             }
             reth::revm::state::Bytecode::Eip7702(eip7702) => {
@@ -870,10 +865,10 @@ impl TryFrom<&proto::Bytecode> for reth::revm::state::Bytecode {
                             legacy_analyzed
                                 .jump_table
                                 .iter()
-                                .map(|dest| *dest as u8)
+                                .copied()
                                 .collect::<Vec<_>>()
                                 .as_slice(),
-                            legacy_analyzed.jump_table.len(),
+                            legacy_analyzed.jump_table_len as usize,
                         ),
                     ),
                 )
