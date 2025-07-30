@@ -236,7 +236,8 @@ message Bytecode {
 message LegacyAnalyzedBytecode {
   bytes bytecode = 1;
   uint64 original_len = 2;
-  repeated uint32 jump_table = 3;
+  bytes jump_table = 3;
+  uint64 jump_table_len = 4;
 }
 
 message Eip7702Bytecode {
