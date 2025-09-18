@@ -1,4 +1,6 @@
 use futures::{Future, TryStreamExt};
+use reth::core::primitives::AlloyBlockHeader;
+use reth::providers::{HashedPostStateProvider, StateProviderFactory};
 use reth_exex::{ExExContext, ExExEvent, ExExNotification};
 use reth_node_api::FullNodeComponents;
 use reth_node_ethereum::EthereumNode;
@@ -8,9 +10,13 @@ use reth_tracing::tracing::info;
 ///
 /// During initialization you can wait for resources you need to be up for the ExEx to function,
 /// like a database connection.
-async fn exex_init<Node: FullNodeComponents>(
+async fn exex_init<Node>(
     ctx: ExExContext<Node>,
-) -> eyre::Result<impl Future<Output = eyre::Result<()>>> {
+) -> eyre::Result<impl Future<Output = eyre::Result<()>>>
+where
+    Node: FullNodeComponents,
+    Node::Provider: HashedPostStateProvider,
+{
     Ok(exex(ctx))
 }
 
@@ -18,18 +24,27 @@ async fn exex_init<Node: FullNodeComponents>(
 ///
 /// This ExEx just prints out whenever either a new chain of blocks being added, or a chain of
 /// blocks being re-orged. After processing the chain, emits an [ExExEvent::FinishedHeight] event.
-async fn exex<Node: FullNodeComponents>(mut ctx: ExExContext<Node>) -> eyre::Result<()> {
+async fn exex<Node>(mut ctx: ExExContext<Node>) -> eyre::Result<()>
+where
+    Node: FullNodeComponents,
+    Node::Provider: HashedPostStateProvider,
+{
     while let Some(notification) = ctx.notifications.try_next().await? {
         match &notification {
             ExExNotification::ChainCommitted { new } => {
-                let bundle_account_itr = new.execution_outcome().bundle_accounts_iter();
-                let mut account_updates = 0;
-                for (_addr, account) in bundle_account_itr {
-                    if account.is_info_changed() {
-                        account_updates += 1;
-                    }
+                let bundle_state = new.execution_outcome().bundle.clone();
+                let hashed_post_state = ctx.provider().hashed_post_state(&bundle_state);
+                let latest_block = new.tip();
+
+                let parent_provider =
+                    ctx.provider().history_by_block_hash(latest_block.parent_hash())?;
+                let (state_root, updates) = parent_provider.state_root_with_updates(hashed_post_state)?;
+
+                if state_root != latest_block.state_root() {
+                    info!("state root mismatch (got {:?}, expected {:?})", state_root, latest_block.state_root());
                 }
-                info!(committed_chain = ?new.range(), trie_updates = ?new.trie_updates(), account_updates, "Received commit");
+
+                info!("got {} account updates", updates.account_nodes_ref().len());
             }
             ExExNotification::ChainReorged { old, new } => {
                 info!(from_chain = ?old.range(), to_chain = ?new.range(), "Received reorg");
